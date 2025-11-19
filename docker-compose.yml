@@ -1,0 +1,69 @@
+services:
+
+  keycloak-postgres:
+    container_name: "birt-keycloak-postgres"
+    image: postgres:15.5-alpine3.19
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_KEYCLOAK_DB}
+      POSTGRES_USER: ${POSTGRES_KEYCLOAK_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_KEYCLOAK_PASSWORD}
+    networks:
+      - keycloak-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_KEYCLOAK_USER} -d $${POSTGRES_KEYCLOAK_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: '512M'
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.6
+    container_name: "birt-keycloak"
+    ports:
+      - "9990:8080"
+      - "9991:8443"
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: ${KC_HOSTNAME}
+      KC_HTTP_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_DB: postgres
+      KC_DB_PASSWORD: ${POSTGRES_KEYCLOAK_PASSWORD}
+      KC_DB_SCHEMA: public
+      KC_DB_USERNAME: ${POSTGRES_KEYCLOAK_USER}
+      KC_DB_URL_HOST: keycloak-postgres
+      KC_DB_URL_DATABASE: ${POSTGRES_KEYCLOAK_DB}
+      KC_LOG_LEVEL: INFO
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    command:
+      - start
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak/import:/opt/keycloak/data/import
+    networks:
+      - keycloak-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: '1024M'
+
+networks:
+  keycloak-network:
+    driver: bridge
+
+volumes:
+  keycloak_postgres_data:
+  keycloak_data:
