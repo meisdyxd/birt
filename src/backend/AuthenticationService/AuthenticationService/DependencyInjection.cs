@@ -3,6 +3,7 @@ using AuthenticationService.Keycloak.KeycloakHttpClient;
 using AuthenticationService.Modules.CreateUser;
 using Shared.CQRS;
 using Shared.Extensions;
+using StackExchange.Redis;
 using System.Diagnostics.CodeAnalysis;
 
 namespace AuthenticationService;
@@ -40,6 +41,21 @@ public static class DependencyInjection
                 .AddClasses(action => action.AssignableTo(typeof(ICommandHandler<,>)))
                     .AsSelfWithInterfaces()
                     .WithScopedLifetime();
+        });
+
+        return services;
+    }
+
+    public static IServiceCollection AddDistributedCache(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var connectionString = configuration.GetConnectionString("Redis").ThrowIfNullOrEmpty("Redis connection string");
+
+            var options = ConfigurationOptions.Parse(connectionString);
+            options.AbortOnConnectFail = false;
+
+            return ConnectionMultiplexer.Connect(options);
         });
 
         return services;
