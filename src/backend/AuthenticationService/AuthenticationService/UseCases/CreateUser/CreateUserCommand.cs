@@ -2,7 +2,7 @@
 using Shared.CQRS;
 using Shared.ResultPattern;
 
-namespace AuthenticationService.Modules.CreateUser;
+namespace AuthenticationService.UseCases.CreateUser;
 
 public sealed record CreateUserCommand : ICommand<Result<string, Error>>
 {

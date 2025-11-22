@@ -19,9 +19,4 @@
     <ProjectReference Include="..\..\Shared\Shared\Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Modules\GetAccessToken\" />
-    <Folder Include="Modules\RefreshToken\" />
-  </ItemGroup>
-
 </Project>

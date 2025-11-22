@@ -1,11 +1,10 @@
-﻿using AuthenticationService.Keycloak;
-using AuthenticationService.Keycloak.KeycloakHttpClient;
+﻿using AuthenticationService.Keycloak.KeycloakHttpClient;
 using AuthenticationService.Keycloak.KeycloakHttpClient.Dto;
 using CSharpFunctionalExtensions;
 using Shared.CQRS;
 using Shared.ResultPattern;
 
-namespace AuthenticationService.Modules.CreateUser;
+namespace AuthenticationService.UseCases.CreateUser;
 
 public class CreateUserHandler : ICommandHandler<CreateUserCommand, Result<string, Error>>
 {

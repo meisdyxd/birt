@@ -1,6 +1,6 @@
 ﻿using AuthenticationService.Keycloak;
 using AuthenticationService.Keycloak.KeycloakHttpClient;
-using AuthenticationService.Modules.CreateUser;
+using AuthenticationService.UseCases.CreateUser;
 using Shared.CQRS;
 using Shared.Extensions;
 using StackExchange.Redis;

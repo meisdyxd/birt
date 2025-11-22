@@ -2,7 +2,6 @@
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Shared.ResultPattern;
 using StackExchange.Redis;
@@ -17,7 +16,8 @@ public class KeycloakClient : IKeycloakClient
     private readonly IDatabaseAsync _redis;
     private readonly SemaphoreSlim _semaphore; 
     private readonly string CreateUserPath;
-    private readonly string GetAdminAccessTokenPath;
+    private readonly string TokenPath;
+    private readonly string LogoutPath;
     private const string REDIS_ADMIN_ACCESS_TOKEN = "keycloak:admin:token";
 
     public KeycloakClient(
@@ -30,7 +30,8 @@ public class KeycloakClient : IKeycloakClient
         _redis = multiplexer.GetDatabase();
         _semaphore = new SemaphoreSlim(1, 1);
         CreateUserPath = $"/admin/realms/{_keycloakOptions.Realm}/users";
-        GetAdminAccessTokenPath = $"/realms/{_keycloakOptions.Realm}/protocol/openid-connect/token";
+        TokenPath = $"/realms/{_keycloakOptions.Realm}/protocol/openid-connect/token";
+        LogoutPath = $"/realms/{_keycloakOptions.Realm}/protocol/openid-connect/logout";
     }
 
     public async Task<Result<string, Error>> CreateUserAsync(CreateUserDto dto, string accessToken, CancellationToken cancellationToken = default)
@@ -94,7 +95,7 @@ public class KeycloakClient : IKeycloakClient
             };
             using var content = new FormUrlEncodedContent(formData);
 
-            var response = await _httpClient.PostAsync(GetAdminAccessTokenPath, content, cancellationToken);
+            var response = await _httpClient.PostAsync(TokenPath, content, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -129,5 +130,143 @@ public class KeycloakClient : IKeycloakClient
         {
             _semaphore.Release();
         }
+    }
+
+    public async Task<Result<TokenPairResponse, Error>> RequestTokenPairAsync(
+        string username,
+        string password,
+        CancellationToken cancellationToken = default)
+    {
+        var formData = new List<KeyValuePair<string, string>>
+        {
+            new("grant_type", "password"),
+            new("client_id", _keycloakOptions.ClientId),
+            new("client_secret", _keycloakOptions.ClientSecret),
+            new("username", username),
+            new("password", password),
+            new("scope", "openid profile email")
+        };
+
+        using var content = new FormUrlEncodedContent(formData);
+
+        var response = await _httpClient.PostAsync(TokenPath, content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return new Error(
+                response.ReasonPhrase ?? body,
+                "request-token-pair",
+                "keycloak-client");
+        }
+
+        try
+        {
+            var tokenResponse = JsonConvert.DeserializeObject<TokenPairResponse>(body);
+
+            if (tokenResponse == null ||
+                string.IsNullOrWhiteSpace(tokenResponse.AccessToken) ||
+                string.IsNullOrWhiteSpace(tokenResponse.RefreshToken))
+            {
+                return new Error(
+                    "Token response is null or missing access/refresh token",
+                    "request-token-pair",
+                    "keycloak-client");
+            }
+
+            if (tokenResponse.ExpiresIn <= 0)
+            {
+                return new Error(
+                    "Access token expires_in is invalid",
+                    "request-token-pair",
+                    "keycloak-client");
+            }
+
+            return tokenResponse;
+        }
+        catch (JsonException)
+        {
+            return new Error(
+                "Failed parse JSON",
+                "request-token-pair",
+                "keycloak-client");
+        }
+    }
+
+    public async Task<Result<TokenPairResponse, Error>> RefreshTokensAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        var formData = new List<KeyValuePair<string, string>>
+        {
+            new("grant_type", "refresh_token"),
+            new("client_id", _keycloakOptions.ClientId),
+            new("client_secret", _keycloakOptions.ClientSecret),
+            new("refresh_token", refreshToken)
+        };
+
+        using var content = new FormUrlEncodedContent(formData);
+
+        var response = await _httpClient.PostAsync(TokenPath, content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return new Error(
+                response.ReasonPhrase ?? body,
+                "refresh-token",
+                "keycloak-client");
+        }
+
+        try
+        {
+            var tokenResponse = JsonConvert.DeserializeObject<TokenPairResponse>(body);
+
+            if (tokenResponse == null ||
+                string.IsNullOrWhiteSpace(tokenResponse.AccessToken) ||
+                string.IsNullOrWhiteSpace(tokenResponse.RefreshToken))
+            {
+                return new Error(
+                    "Token response is null or missing tokens",
+                    "refresh-token",
+                    "keycloak-client");
+            }
+
+            return tokenResponse;
+        }
+        catch (JsonException)
+        {
+            return new Error(
+                "Failed parse JSON",
+                "refresh-token",
+                "keycloak-client");
+        }
+    }
+
+    public async Task<UnitResult<Error>> LogoutAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        var formData = new List<KeyValuePair<string, string>>
+        {
+            new("client_id", _keycloakOptions.ClientId),
+            new("client_secret", _keycloakOptions.ClientSecret),
+            new("refresh_token", refreshToken)
+        };
+
+        using var content = new FormUrlEncodedContent(formData);
+
+        var response = await _httpClient.PostAsync(LogoutPath, content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return new Error(
+                response.ReasonPhrase ?? body,
+                "logout",
+                "keycloak-client");
+        }
+
+        return UnitResult.Success<Error>();
     }
 }
