@@ -1,4 +1,5 @@
 using AuthenticationService;
+using Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
