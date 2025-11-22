@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Shared.ResultPattern;
+using StackExchange.Redis;
 using System.Net.Http.Headers;
 
 namespace AuthenticationService.Keycloak.KeycloakHttpClient;
@@ -13,15 +14,21 @@ public class KeycloakClient : IKeycloakClient
 {
     private readonly HttpClient _httpClient;
     private readonly KeycloakOptions _keycloakOptions;
+    private readonly IDatabaseAsync _redis;
+    private readonly SemaphoreSlim _semaphore; 
     private readonly string CreateUserPath;
     private readonly string GetAdminAccessTokenPath;
+    private const string REDIS_ADMIN_ACCESS_TOKEN = "keycloak:admin:token";
 
     public KeycloakClient(
         HttpClient httpClient,
+        IConnectionMultiplexer multiplexer,
         IOptions<KeycloakOptions> options)
     {
         _keycloakOptions = options.Value;
         _httpClient = httpClient;
+        _redis = multiplexer.GetDatabase();
+        _semaphore = new SemaphoreSlim(1, 1);
         CreateUserPath = $"/admin/realms/{_keycloakOptions.Realm}/users";
         GetAdminAccessTokenPath = $"/realms/{_keycloakOptions.Realm}/protocol/openid-connect/token";
     }
@@ -49,18 +56,16 @@ public class KeycloakClient : IKeycloakClient
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        Console.WriteLine($"URL: {CreateUserPath}");
-        Console.WriteLine($"Body: {json}");
-        Console.WriteLine($"Auth: Bearer {accessToken}");
-
         var response = await _httpClient.SendAsync(request, cancellationToken);
-
-        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-        Console.WriteLine($"Status: {response.StatusCode}");
-        Console.WriteLine($"Response: {responseContent}");
-
         if (response.IsSuccessStatusCode)
-            return response.Headers.Location?.Segments?.LastOrDefault()?.Trim('/')!;
+        {
+            var userId = response.Headers.Location?.Segments?.LastOrDefault()?.Trim('/');
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return new Error("UserId is null or white space", "create-user", "keycloak-client");
+            }
+            return userId;
+        }
 
         return new Error(
             response.ReasonPhrase ?? await response.Content.ReadAsStringAsync(cancellationToken), 
@@ -70,34 +75,73 @@ public class KeycloakClient : IKeycloakClient
 
     public async Task<Result<string, Error>> GetAdminAccessTokenAsync(CancellationToken cancellationToken = default)
     {
-        var collections = new List<KeyValuePair<string, string>>
-        {
-            new("grant_type", "client_credentials"),
-            new("client_id", _keycloakOptions.ClientId),
-            new("client_secret", _keycloakOptions.ClientSecret)
-        };
-        var content = new FormUrlEncodedContent(collections);
+        var cachedToken = await _redis.StringGetAsync(REDIS_ADMIN_ACCESS_TOKEN);
+        if (!cachedToken.IsNullOrEmpty && cachedToken.HasValue)
+            return cachedToken.ToString();
 
-        var response = await _httpClient.PostAsync(GetAdminAccessTokenPath, content, cancellationToken);
-        if (response.IsSuccessStatusCode)
+        await _semaphore.WaitAsync(cancellationToken);
+        try
         {
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            cachedToken = await _redis.StringGetAsync(REDIS_ADMIN_ACCESS_TOKEN);
+            if (!cachedToken.IsNullOrEmpty && cachedToken.HasValue)
+                return cachedToken.ToString();
 
-            var jObject = JObject.Parse(json);
-            if (jObject.TryGetValue("access_token", out var jToken))
+            var formData = new List<KeyValuePair<string, string>>
             {
-                var accessToken = jToken.Value<string>();
-                if (accessToken == null)
+                new("grant_type", "client_credentials"),
+                new("client_id", _keycloakOptions.ClientId),
+                new("client_secret", _keycloakOptions.ClientSecret)
+            };
+            using var content = new FormUrlEncodedContent(formData);
+
+            var response = await _httpClient.PostAsync(GetAdminAccessTokenPath, content, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                try
+                {
+                    var jObject = JObject.Parse(json);
+                    if (jObject.TryGetValue("access_token", out var jToken))
+                    {
+                        var accessToken = jToken.Value<string>();
+                        if (accessToken == null)
+                            return new Error(
+                                "Access token is null",
+                                "get-admin-access-token",
+                                "keycloak-client");
+
+                        if (jObject.TryGetValue("expires_in", out var jExpire))
+                        {
+                            var expiresIn = jExpire.Value<int>();
+                            if (expiresIn == default)
+                                return new Error(
+                                    "Expires in is default",
+                                    "get-admin-access-token",
+                                    "keycloak-client");
+                            var expiredTime = TimeSpan.FromSeconds(int.Max(expiresIn - 10, 1));
+
+                            await _redis.StringSetAsync([new(REDIS_ADMIN_ACCESS_TOKEN, accessToken)], expiry: new Expiration(expiredTime));
+                        }
+                        return accessToken;
+                    }
+                }
+                catch
+                {
                     return new Error(
-                        "Access token is null", 
-                        "get-admin-access-token", 
+                        "Failed parse JSON",
+                        "get-admin-access-token",
                         "keycloak-client");
-                return accessToken;
+                }
             }
+            return new Error(
+                response.ReasonPhrase ?? await response.Content.ReadAsStringAsync(cancellationToken),
+                "get-admin-access-token",
+                "keycloak-client");
         }
-        return new Error(
-            response.ReasonPhrase ?? await response.Content.ReadAsStringAsync(cancellationToken), 
-            "get-admin-access-token", 
-            "keycloak-client");
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 }
