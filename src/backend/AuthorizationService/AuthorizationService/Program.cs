@@ -1,12 +1,15 @@
+using Shared;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+var services = builder.Services;
+var configuration = builder.Configuration;
 
-builder.Services.AddControllers();
+services
+    .AddDistributedCache(configuration)
+    .AddControllers();
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
 
 app.UseHttpsRedirection();
 
