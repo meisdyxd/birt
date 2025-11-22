@@ -98,40 +98,26 @@ public class KeycloakClient : IKeycloakClient
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync(cancellationToken);
-
                 try
                 {
-                    var jObject = JObject.Parse(json);
-                    if (jObject.TryGetValue("access_token", out var jToken))
-                    {
-                        var accessToken = jToken.Value<string>();
-                        if (accessToken == null)
-                            return new Error(
-                                "Access token is null",
-                                "get-admin-access-token",
-                                "keycloak-client");
+                    var tokenResponse = JsonConvert.DeserializeObject<AdminTokenResponse>(json);
+                    if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
+                        return new Error("Access token is null", "get-admin-access-token", "keycloak-client");
 
-                        if (jObject.TryGetValue("expires_in", out var jExpire))
-                        {
-                            var expiresIn = jExpire.Value<int>();
-                            if (expiresIn == default)
-                                return new Error(
-                                    "Expires in is default",
-                                    "get-admin-access-token",
-                                    "keycloak-client");
-                            var expiredTime = TimeSpan.FromSeconds(int.Max(expiresIn - 10, 1));
+                    if (tokenResponse.ExpiresIn == 0)
+                        return new Error("Expires in is default", "get-admin-access-token", "keycloak-client");
 
-                            await _redis.StringSetAsync([new(REDIS_ADMIN_ACCESS_TOKEN, accessToken)], expiry: new Expiration(expiredTime));
-                        }
-                        return accessToken;
-                    }
+                    var expiredTime = TimeSpan.FromSeconds(int.Max(tokenResponse.ExpiresIn - 10, 1));
+
+                    await _redis.StringSetAsync(
+                        [new(REDIS_ADMIN_ACCESS_TOKEN, tokenResponse.AccessToken)],
+                        expiry: expiredTime);
+
+                    return tokenResponse.AccessToken;
                 }
-                catch
+                catch (JsonException)
                 {
-                    return new Error(
-                        "Failed parse JSON",
-                        "get-admin-access-token",
-                        "keycloak-client");
+                    return new Error("Failed parse JSON", "get-admin-access-token", "keycloak-client");
                 }
             }
             return new Error(
