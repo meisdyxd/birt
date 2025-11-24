@@ -43,7 +43,7 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
 
         builder.HasOne(r => r.ResourceType)
             .WithMany(rt => rt.Roles)
-            .HasForeignKey(r => r.ResourceType);
+            .HasForeignKey(r => r.ResourceTypeId);
 
         builder.HasMany(r => r.SubjectRoles)
             .WithOne(sr => sr.Role)
