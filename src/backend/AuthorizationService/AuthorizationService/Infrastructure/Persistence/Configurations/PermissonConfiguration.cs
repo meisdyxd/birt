@@ -14,7 +14,7 @@ public class PermissonConfiguration : IEntityTypeConfiguration<Permission>
             .IsUnique();
 
         builder.HasKey(p => p.Id)
-            .HasName("pk_id");
+            .HasName("pk_permission_id");
 
         builder.Property(p => p.Id)
             .HasDefaultValueSql("uuid_generate_v4()")

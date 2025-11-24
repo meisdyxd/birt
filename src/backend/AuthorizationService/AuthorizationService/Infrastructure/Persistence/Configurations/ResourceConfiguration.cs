@@ -11,7 +11,7 @@ public class ResourceConfiguration : IEntityTypeConfiguration<Resource>
         builder.ToTable("resources", act => act.HasComment("Ресурсы"));
 
         builder.HasKey(r => r.Id)
-            .HasName("pk_id");
+            .HasName("pk_resource_id");
 
         builder.Property(r => r.Id)
             .HasDefaultValueSql("uuid_generate_v4()")

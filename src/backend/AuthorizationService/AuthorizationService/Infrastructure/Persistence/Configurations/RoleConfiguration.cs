@@ -14,7 +14,7 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
             .IsUnique();
 
         builder.HasKey(r => r.Id)
-            .HasName("pk_id");
+            .HasName("pk_role_id");
 
         builder.Property(r => r.Id)
             .HasDefaultValueSql("uuid_generate_v4()")

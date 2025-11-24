@@ -14,7 +14,7 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
             .IsUnique();
 
         builder.HasKey(s => s.Id)
-            .HasName("pk_id");
+            .HasName("pk_subject_id");
 
         builder.Property(s => s.Id)
             .HasDefaultValueSql("uuid_generate_v4()")

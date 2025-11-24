@@ -14,7 +14,7 @@ public class ResourceTypeConfiguration : IEntityTypeConfiguration<ResourceType>
             .IsUnique();
 
         builder.HasKey(rt => rt.Id)
-            .HasName("pk_id");
+            .HasName("pk_resource_type_id");
 
         builder.Property(rt => rt.Id)
             .HasDefaultValueSql("uuid_generate_v4()")
