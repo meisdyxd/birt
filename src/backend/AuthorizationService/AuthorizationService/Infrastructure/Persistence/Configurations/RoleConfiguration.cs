@@ -41,6 +41,11 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
             .HasComment("Тип ресурса")
             .HasColumnName("resource_type_id");
 
+        builder.Property(r => r.Level)
+            .IsRequired()
+            .HasComment("Уровень роли")
+            .HasColumnName("level");
+
         builder.HasOne(r => r.ResourceType)
             .WithMany(rt => rt.Roles)
             .HasForeignKey(r => r.ResourceTypeId);
