@@ -8,22 +8,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Shared\Shared.csproj" />
+    <ProjectReference Include="..\AuthorizationService.Core\AuthorizationService.Core.csproj" />
+    <ProjectReference Include="..\AuthorizationService.Infrastructure\AuthorizationService.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.11" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.11" />
+
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.11">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.11" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Infrastructure\Persistence\Enums\" />
-    <Folder Include="Infrastructure\Persistence\Migrations\" />
   </ItemGroup>
 
 </Project>
