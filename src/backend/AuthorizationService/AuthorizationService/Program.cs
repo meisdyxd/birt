@@ -1,3 +1,4 @@
+using AuthorizationService;
 using Shared;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +8,7 @@ var configuration = builder.Configuration;
 
 services
     .AddDistributedCache(configuration)
+    .AddInfrastructure(configuration)
     .AddControllers();
 
 var app = builder.Build();
