@@ -24,7 +24,7 @@ public class SubjectRoleConfiguration : IEntityTypeConfiguration<SubjectRole>
             .HasColumnName("role_id");
 
         builder.Property(sr => sr.ResourceId)
-            .IsRequired(false)
+            .IsRequired()
             .HasComment("Идентификатор ресурса")
             .HasColumnName("resource_id");
 

@@ -23,7 +23,7 @@ public class SubjectRole
     /// <summary>
     /// Идентификатор ресурса
     /// </summary>
-    public Guid? ResourceId { get; set; }
+    public Guid ResourceId { get; set; }
 
     /// <summary>
     /// Дата выдачи роли
@@ -43,7 +43,7 @@ public class SubjectRole
     private SubjectRole(
         Guid subjectId,
         Guid roleId,
-        Guid? resourceId,
+        Guid resourceId,
         DateTime? validFrom = null,
         DateTime? validTo = null)
     {
@@ -57,7 +57,7 @@ public class SubjectRole
     public static Result<SubjectRole, Error> Create(
         Guid subjectId,
         Guid roleId,
-        Guid? resourceId,
+        Guid resourceId,
         DateTime? validFrom = null,
         DateTime? validTo = null)
     {
@@ -67,7 +67,7 @@ public class SubjectRole
         if (roleId == Guid.Empty)
             return new Error("Role id is null", "create-subject-role", "autzh-db");
 
-        if (resourceId is not null && resourceId == Guid.Empty)
+        if (resourceId == Guid.Empty)
             return new Error("Resource id is null", "create-subject-role", "autzh-db");
 
         if (validFrom is not null && validFrom == default)
