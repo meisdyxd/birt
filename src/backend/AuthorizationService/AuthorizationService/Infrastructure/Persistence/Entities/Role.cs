@@ -3,6 +3,9 @@ using Shared.ResultPattern;
 
 namespace AuthorizationService.Infrastructure.Persistence.Entities;
 
+/// <summary>
+/// Роль
+/// </summary>
 public class Role
 {
     protected Role() { }
@@ -37,8 +40,8 @@ public class Role
     /// </summary>
     public int Level { get; set; }
 
+    // navigations
     public ResourceType ResourceType { get; set; } = null!;
-
     public ICollection<RolePermission> RolePermissions { get; set; } = [];
     public ICollection<SubjectRole> SubjectRoles { get; set; } = [];
 

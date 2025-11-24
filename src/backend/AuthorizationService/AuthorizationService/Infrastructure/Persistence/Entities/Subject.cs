@@ -3,6 +3,9 @@ using Shared.ResultPattern;
 
 namespace AuthorizationService.Infrastructure.Persistence.Entities;
 
+/// <summary>
+/// Субъект(пользователь)
+/// </summary>
 public class Subject
 {
     protected Subject() { }
@@ -27,6 +30,7 @@ public class Subject
     /// </summary>
     public DateTime LastUpdatedAt { get; set; }
 
+    // navigations
     public ICollection<Resource> Resources { get; set; } = [];
     public ICollection<SubjectRole> SubjectRoles { get; set; } = [];
 

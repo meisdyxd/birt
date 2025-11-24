@@ -35,8 +35,8 @@ public class Permission
     /// </summary>
     public Guid ResourceTypeId { get; set; }
 
+    // navigations
     public ResourceType ResourceType { get; set; } = null!;
-
     public ICollection<RolePermission> RolePermissions { get; set; } = [];
 
     private Permission(

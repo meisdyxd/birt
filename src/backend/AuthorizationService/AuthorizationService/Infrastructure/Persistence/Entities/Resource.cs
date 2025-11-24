@@ -30,6 +30,7 @@ public class Resource
     /// </summary>
     public Guid? OwnerSubjectId { get; set; }
 
+    // navigations
     public ResourceType ResourceType { get; set; } = null!;
     public Subject? OwnerSubject { get; set; }
     public ICollection<SubjectRole> SubjectRoles { get; set; } = [];

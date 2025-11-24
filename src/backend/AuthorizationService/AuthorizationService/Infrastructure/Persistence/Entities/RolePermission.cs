@@ -3,6 +3,9 @@ using Shared.ResultPattern;
 
 namespace AuthorizationService.Infrastructure.Persistence.Entities;
 
+/// <summary>
+/// Связь роли с разрешениями
+/// </summary>
 public class RolePermission
 {
     protected RolePermission() { }
@@ -17,6 +20,7 @@ public class RolePermission
     /// </summary>
     public Guid PermissionId { get; set; }
 
+    // navigations
     public Role Role { get; set; } = null!;
     public Permission Permission { get; set; } = null!;
 

@@ -3,6 +3,9 @@ using Shared.ResultPattern;
 
 namespace AuthorizationService.Infrastructure.Persistence.Entities;
 
+/// <summary>
+/// Связь субъекта(пользователя) с ролью
+/// </summary>
 public class SubjectRole
 {
     protected SubjectRole(){}
@@ -32,6 +35,7 @@ public class SubjectRole
     /// </summary>
     public DateTime? ValidTo { get; set; }
 
+    // navigations
     public Subject Subject { get; set; } = null!;
     public Role Role { get; set; } = null!;
     public Resource? Resource { get; set; }

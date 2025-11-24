@@ -3,6 +3,9 @@ using Shared.ResultPattern;
 
 namespace AuthorizationService.Infrastructure.Persistence.Entities;
 
+/// <summary>
+/// Тип ресурса
+/// </summary>
 public class ResourceType
 {
     protected ResourceType() { }
@@ -27,6 +30,7 @@ public class ResourceType
     /// </summary>
     public string? Description { get; set; }
 
+    // navigations
     public ICollection<Resource> Resources { get; set; } = [];
     public ICollection<Permission> Permissions { get; set; } = [];
     public ICollection<Role> Roles { get; set; } = [];
