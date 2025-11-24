@@ -32,7 +32,7 @@ public class Resource
 
     public ResourceType ResourceType { get; set; } = null!;
     public Subject? OwnerSubject { get; set; }
-    public ICollection<Resource> Resources { get; set; } = [];
+    public ICollection<SubjectRole> SubjectRoles { get; set; } = [];
 
     private Resource(
         Guid resourceTypeId,

@@ -72,6 +72,9 @@ public class SubjectRole
         if (validTo is not null && validTo == default)
             return new Error($"Valid to is {validTo}", "create-subject-role", "autzh-db");
 
+        if (validFrom >= validTo)
+            return new Error($"'valid from' must be bigger than 'valid to'", "create-subject-role", "autzh-db");
+
         return new SubjectRole(subjectId, roleId, resourceId, validFrom, validTo);
     }
 }
